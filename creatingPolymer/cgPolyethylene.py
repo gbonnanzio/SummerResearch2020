@@ -2,124 +2,123 @@
 import numpy as py
 import math
 
-def createPolymer():
+def createPolymers(numPolymers,bondAngle,bondLength,numAtomsInChain):
     
     pi = math.pi
     #carbon carbon carbon angle
-    ccca = pi/3
+    angleUsed = (bondAngle/2)*(pi/180)
     
-    # rotation matrix
-    #R = [[math.cos(ccca), math.sin(ccca), 0],[-math.sin(ccca),math.cos(ccca),0],[0,0,1]]
+    ccBL = 1.1 #arbitrary change later
+    allAtoms = []
+    allBonds = []
+    allAngles = []
+    atomsInChain = [] # type -> 1 for C [type, x, y, z] coords 
+    bondsInChain = [] # type -> 1 for C-C, [type, atom#, atom#]
+    anglesInChain = [] # type -> 1 for C-C-C [type, end, middle, end] (these are atom numbers)
+   
+    currAtom = 0 # num indicates atom you are about to create
+    currBond = 0
+    currAngle = 0
+    for numChain in range(numPolymers):
 
-    #mirMatrix = [[0,1,0],[-1, 0, 0],[0,0,1]]
-
-    #RH = [[1,0,0],[0,math.cos(pi/4),math.sin(pi/4)],[0,-math.sin(pi/4),math.cos(pi/4)]]
-
-    ccBond = 2
-    chBond = 1
-
-    atoms = [] # atom x y z coords
-    types = [] # 1 for C, 2 for H
-    bonds = [] # type -> 1 for C-C, 2 for C-H. [type, atom#, atom#]
-    angles = [] # type -> [end, middle, end] (atom number)
-    dihedrals = []
-    #create first carbon (type 1) at origin
-    atoms.append([0,0,0])
-    types.append(1)
-    
-    #create H in yz plane
-    atoms.append([-chBond*math.cos(pi/4), 0, chBond*math.sin(pi/4)])
-    types.append(2)
-    bonds.append([2,1,2])
-    
-    #create another H in yz plane but now -z
-    atoms.append([-chBond*math.cos(pi/4),0, -chBond*math.sin(pi/4)])
-    types.append(2)
-    bonds.append([2,1,3])
-    angles.append([2,1,3])
-
-    currAtom = 3
-    while len(atoms) < 30:
+        #create first C at origin
         currAtom += 1
-        if(currAtom%2 == 0):
-            cxAdd = ccBond*math.cos(pi/3)
-            hxAdd = chBond*math.cos(pi/4)
-        else:
-            cxAdd = -ccBond*math.cos(pi/3)
-            hxAdd = -chBond*math.cos(pi/4)
-        
-        cyAdd = ccBond*math.sin(pi/3)
-        
-        #create a new carbon
-        prevAtomCoords = atoms[currAtom - 4].copy()
-        prevAtomCoords[0] = prevAtomCoords[0] + cxAdd 
-        prevAtomCoords[1] = prevAtomCoords[1] + cyAdd
-        atoms.append(prevAtomCoords)
-        types.append(1)
-        bonds.append([1,currAtom-3,currAtom])
-        
-        #create c-c-c angle
-        if(currAtom > 6):
-            angles.append([currAtom,currAtom-3,currAtom-6])
-        #create dihedral
-        if(currAtom > 9):
-            dihedrals.append([currAtom-9,currAtom-6,currAtom-3,currAtom])
-        # add first H to new C
-        currAtom += 1
-        currHCoords = [prevAtomCoords[0]+hxAdd,prevAtomCoords[1],chBond*math.sin(pi/4)]
-        atoms.append(currHCoords)
-        types.append(2)
-        bonds.append([2,currAtom,currAtom-1])
-        # add second H to new C
-        currAtom += 1
-        currHCoords[2] = -currHCoords[2]
-        atoms.append(currHCoords)
-        types.append(2)
-        bonds.append([2,currAtom,currAtom-2])
-        angles.append([currAtom,currAtom-2,currAtom -1])
+        atomsInChain.append([1,0,0,numChain*2*bondLength])
+
+        while(len(atomsInChain) < numAtomsInChain):
+            
+            currAtom += 1
+
+            if(currAtom%2 == 0):
+                cxAdd = bondLength*math.cos(angleUsed)
+            else:
+                cxAdd = -bondLength*math.cos(angleUsed)
+            
+            cyAdd = bondLength*math.sin(angleUsed)
+            
+            #create a new carbon
+
+            #get coords of the last carbon
+            newAtomCoords = atomsInChain[currAtom%numAtomsInChain - 2].copy()
+            # no change [0], all same type
+            newAtomCoords[1] = newAtomCoords[1] + cxAdd 
+            newAtomCoords[2] = newAtomCoords[2] + cyAdd
+            #no change in z (all in xy plane)
+            atomsInChain.append(newAtomCoords)
+            if(currAtom%(numAtomsInChain) != 1):
+                bondsInChain.append([1,currAtom-1,currAtom])
+            
+            # if more than 2 C, create c-c-c angle
+            if(currAtom>2 and (currAtom%numAtomsInChain == 0 or currAtom%numAtomsInChain > 2)):
+                anglesInChain.append([1,currAtom-2,currAtom-1,currAtom])
+        tmpAtomsCopy = atomsInChain.copy()
+        allAtoms.append(tmpAtomsCopy)
+        atomsInChain = []
+        tmpBondsCopy = bondsInChain.copy()
+        allBonds.append(tmpBondsCopy)
+        bondsInChain = []
+        tmpAnglesCopy = anglesInChain.copy()
+        allAngles.append(tmpAnglesCopy)
+        anglesInChain = []
+
     
-    return atoms, types, bonds, angles, dihedrals
+    return allAtoms, allBonds, allAngles
 
 
 def main():
-    outFile = open('polymerOutput.txt','w')
-    atomsList, typesList, bondsList, anglesList, dihedralsList = createPolymer()
-    outFile.write(str(len(atomsList)) + '\t atoms\n')
-    outFile.write(str(len(bondsList)) + '\t bonds\n')
-    outFile.write(str(len(anglesList)) + '\t angles\n')
-    outFile.write(str(len(dihedralsList)) + '\t dihedrals\n')
-    
+    outFile = open('polymerData.data','w')
+    numPolymers = 4
+    atomsList, bondsList, anglesList = createPolymers(numPolymers,109.5,1.1,30)
+    #print(atomsList)
+    outFile.write('# Polymer Data file\n')
+    outFile.write(str(len(atomsList)*len(atomsList[0])) + '\t atoms\n')
+    outFile.write(str(len(bondsList)*len(bondsList[0])) + '\t bonds\n')
+    outFile.write(str(len(anglesList)*len(anglesList[0])) + '\t angles\n\n')
+    outFile.write('1\tatom types\n1\tbond types\n1\tangle types\n\n')
+    outFile.write('-10.0000\t40.0000 xlo xhi\n')
+    outFile.write('-10.0000\t40.0000 ylo yhi\n')
+    outFile.write('-10.0000\t40.0000 zlo zhi\n\n')
+    outFile.write('Masses\n\n1\t1.05\n')
+
+
     outFile.write('\nAtoms\n\n')
-    for indx in range(len(atomsList)):
-        outFile.write(str(indx+1) + '\t' + str(typesList[indx]) + '\t')
-        for coord in atomsList[indx]:
-            coord = round(coord,10)
-            outFile.write(str(coord)+'\t')
-        outFile.write('\n')
+    totAtoms = 1
+    for polymerIndx in range(len(atomsList)):
+        tmpAtomList = atomsList[polymerIndx] #atoms in one polymer
+        for atomIndx in range(len(tmpAtomList)):
+            outFile.write(str(totAtoms) + '\t')
+            totAtoms += 1
+            for coordIndx in range(len(tmpAtomList[atomIndx])):
+                if coordIndx == 0:
+                    outFile.write(str(polymerIndx+1) + '\t'+ str(tmpAtomList[atomIndx][coordIndx])+'\t')
+                else:
+                    tmpCoord = "{:.9f}".format(tmpAtomList[atomIndx][coordIndx])
+                    outFile.write(tmpCoord +'\t')
+            outFile.write('\n')
     
     outFile.write('\nBonds\n\n')
-    for indx in range(len(bondsList)):
-        outFile.write(str(indx+1) + '\t')
-        for element in bondsList[indx]:
-            #round(element,5)
-            outFile.write(str(element)+'\t')
-        outFile.write('\n')
- 
-    outFile.write('\nAngles\n\n')
-    for indx in range(len(anglesList)):
-        outFile.write(str(indx+1) + '\t')
-        for element in anglesList[indx]:
-            #round(element,5)
-            outFile.write(str(element)+'\t')
-        outFile.write('\n')
+    totBonds = 1
+    for polymerIndx in range(len(bondsList)):
+        tmpBondList = bondsList[polymerIndx] #atoms in one polymer
+        for bondIndx in range(len(tmpBondList)):
+            outFile.write(str(totBonds) + '\t')
+            totBonds += 1
+            for element in tmpBondList[bondIndx]:
+                outFile.write(str(element)+'\t')
+            outFile.write('\n')
 
-    outFile.write('\nDihedrals\n\n')
-    for indx in range(len(dihedralsList)):
-        outFile.write(str(indx+1) + '\t')
-        for element in dihedralsList[indx]:
-            #round(element,5)
-            outFile.write(str(element)+'\t')
-        outFile.write('\n')
+
+    outFile.write('\nAngles\n\n')
+    totAngles = 1
+    for polymerIndx in range(len(anglesList)):
+        tmpAngleList = anglesList[polymerIndx] #atoms in one polymer
+        for angleIndx in range(len(tmpAngleList)):
+            outFile.write(str(totAngles) + '\t')
+            totAngles += 1
+            for element in tmpAngleList[angleIndx]:
+                outFile.write(str(element)+'\t')
+            outFile.write('\n')
+
 
 main()
 
