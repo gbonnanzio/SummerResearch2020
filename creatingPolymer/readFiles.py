@@ -69,7 +69,7 @@ def readMyDumpFile(fileName,linesToAlwaysSkip, numAtoms):
         outIndx = indx%(numAtoms+linesToAlwaysSkip)
         if(outIndx not in range(linesToAlwaysSkip)):
             currLineList = allLinesList[indx].split()
-            currCoords = [currLineList[2],currLineList[3],currLineList[4]]
+            currCoords = [float(currLineList[2]),float(currLineList[3]),float(currLineList[4])]
             timeStepCoords.append(currCoords)
         elif(outIndx == numAtoms+linesToAlwaysSkip-1):
             outputCoordsList.append(timeStepCoords)
@@ -98,8 +98,9 @@ def readMyDumpFileForAvgVal(fileName,linesToAlwaysSkip, numVals):
             currLineList = allLinesList[indx].split()
             currVal = currLineList[0]
             timeStepCoords.append(float(currVal))
-    #    elif(outIndx == numVals+linesToAlwaysSkip-1):
-     #       tmplList = timeStepCoords.copy()
-      ##     timeStepCoords = []
+        if(outIndx == numVals+linesToAlwaysSkip-1):
+            tmpList = timeStepCoords.copy()
+            outputCoordsList.append(tmpList)     
+            timeStepCoords = []
     
-    return timeStepCoords
+    return outputCoordsList
