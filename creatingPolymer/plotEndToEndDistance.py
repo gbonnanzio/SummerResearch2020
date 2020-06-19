@@ -17,11 +17,9 @@ def binEndToEndDistance():
     # and returns the radii with the pair (assumes periodic boundary conditions)
     
     bondFile = 'bonds.lmpdump'
-    angleFile = 'angles.lmpdump'
     totBonds = 58
     totMols = 2
     allBonds = readMyDumpFileForAvgVal(bondFile,9,totBonds)
-    #print(allBonds)
     allREE = []
     currRee = 0
     for tsList in allBonds:
@@ -35,7 +33,9 @@ def binEndToEndDistance():
             allREE.append(tmpRee)
             
 
-    #we have a list allREE of all the lengths of the polymer at every timestep
+    # we have a list allREE of all the lengths of all the polymer at every timestep in one list
+    # index represents what time step (proportionally) we are at
+    # perform binning 
     maxR = max(allREE)
     print(maxR)
     minR = min(allREE)
@@ -51,13 +51,11 @@ def binEndToEndDistance():
     binnedR = [x+0.5*rStep for x in rRange]
     totalBinned = float(len(allREE))
     freqREE = [num/totalBinned for num in binnedREE]
-    print(sum(freqREE))
-    #print(binnedR)
+    
+    # plot histogram 
     plt.bar(binnedR,freqREE,width = rStep)
     plt.xlabel('Bond Length')
     plt.ylabel('Frequency')
-    #plt.ylim(0,.15)
-    #print(bins)
     plt.show()
 
 
