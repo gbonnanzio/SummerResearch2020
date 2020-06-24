@@ -1,7 +1,9 @@
 #! Program Files (x86)/PythonDownload
 import matplotlib.pyplot as plt
 import statistics as stat 
+import math
 from readFiles import readMyPeOUTFile
+
 
 def checkInRange(min1,max1,min2,max2):
     check1 = max2 > min1 and max2 < max1
@@ -27,23 +29,27 @@ def main():
     fileList = ['thermo.125.OUT','thermo.25.OUT','thermo.50.OUT']
     colors = ['ro','bs','g^']
     labels = ['ρ = 0.125','ρ = 0.25','ρ = 0.50']
-    blockAvg = 25
-    avgTSList = []
-    tmpTSList = []
-    avgPEList = []
-    tmpPEList = []
-    stdevPEList = []
-    tmpSDList = []
-    checkLast = 5
-    for fileIndx in range(1):
+    numBlocks = 25
+    checkPrev = 5
+    
+    for fileIndx in range(len(fileList)):
+        avgTSList = []
+        tmpTSList = []
+        avgPEList = []
+        tmpPEList = []
+        stdevPEList = []
+        tmpSDList = []
         ts, pe = readMyPeOUTFile(fileList[fileIndx])
-        first = 0
-        last = blockAvg
         indx = 0
-        for tsIndx in range(len(ts)//blockAvg):
-            tmpTS = stat.mean(ts[tsIndx*blockAvg:(tsIndx+1)*blockAvg-1])
-            tmpPE = stat.mean(pe[tsIndx*blockAvg:(tsIndx+1)*blockAvg-1])
-            tmpPEstdev = stat.stdev(pe[tsIndx*blockAvg:(tsIndx+1)*blockAvg-1])
+        endIndx = math.ceil(len(ts)/numBlocks)
+        for tsIndx in range(endIndx):
+            first = tsIndx*numBlocks
+            last = (tsIndx+1)*numBlocks-1
+            if(last>=len(ts)):
+                last = -1
+            tmpTS = stat.mean(ts[first:last])
+            tmpPE = stat.mean(pe[first:last])
+            tmpPEstdev = stat.stdev(pe[first:last])
             if(indx == 0):
                 tmpTSList.append(tmpTS)
                 tmpPEList.append(tmpPE)
@@ -54,12 +60,12 @@ def main():
                 prevMax = tmpPEList[indx-1] + tmpSDList[indx-1]
                 currMin = tmpPE - tmpPEstdev
                 currMax = tmpPE + tmpPEstdev
-                inRange = checkWholeList(tmpPEList,tmpSDList,currMin,currMax,checkLast)
+                inRange = checkWholeList(tmpPEList,tmpSDList,currMin,currMax,checkPrev)
                 if(inRange):
                     tmpTSList.append(tmpTS)
                     tmpPEList.append(tmpPE)
                     tmpSDList.append(tmpPEstdev)
-                    if(tsIndx == len(ts)//blockAvg-1):
+                    if(tsIndx == endIndx-1):
                         copyTS = tmpTSList.copy()
                         avgTSList.append(copyTS)
                         copyPE = tmpPEList.copy()
@@ -83,7 +89,7 @@ def main():
                     tmpSDList.append(tmpPEstdev)
                     stdevPEList.append(copySD) 
 
-                    if(tsIndx == len(ts)//blockAvg-1):
+                    if(tsIndx == endIndx-1):
                         copyTS = tmpTSList.copy()
                         avgTSList.append(copyTS)
                         copyPE = tmpPEList.copy()
@@ -93,15 +99,17 @@ def main():
                     indx = 1
 
         #print(len(avgTSList))  
+        plt.figure(fileIndx+1)
         for pltIndx in range(len(avgTSList)):
             if(pltIndx%2 == 0):
-                plt.errorbar(avgTSList[pltIndx],avgPEList[pltIndx],yerr = stdevPEList[pltIndx], ecolor = 'b',color = 'k',ms = 3,capsize = 3,label = labels[fileIndx])
+                plt.errorbar(avgTSList[pltIndx],avgPEList[pltIndx],yerr = stdevPEList[pltIndx], ecolor = 'b',color = 'k',ms = 3,capsize = 3)
             else:
-                plt.errorbar(avgTSList[pltIndx],avgPEList[pltIndx],yerr = stdevPEList[pltIndx], ecolor = 'r',color = 'k',ms = 3,capsize = 3,label = labels[fileIndx])
-    plt.xlabel('Timestep')
-    plt.ylabel('Potential Energy (KT)')
-    #plt.legend()
-    plt.show()
+                plt.errorbar(avgTSList[pltIndx],avgPEList[pltIndx],yerr = stdevPEList[pltIndx], ecolor = 'r',color = 'k',ms = 3,capsize = 3)
+        plt.xlabel('Timestep')
+        plt.ylabel('Potential Energy (KT)')
+        plt.show()
+
+
 
 main()	
 
