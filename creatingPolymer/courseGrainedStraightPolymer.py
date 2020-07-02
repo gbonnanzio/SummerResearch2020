@@ -1,5 +1,5 @@
 #! Program Files (x86)/PythonDownload
-import numpy as py
+import numpy as np
 import math
 
 def createPolymers(numPolymers,bondAngle,bondLength,numAtomsInChain):
@@ -10,7 +10,8 @@ def createPolymers(numPolymers,bondAngle,bondLength,numAtomsInChain):
     pi = math.pi
     # angle to be used for calculations
     angleUsed = (bondAngle/2)*(pi/180)
-     
+    initialStart = 1.0
+    spacing = 3.0 #spacing between intitial polymers
     # list of all atom info broken down by molecule [[[type,x,y,z],[type,x,y,z]...][[type,x,y,z],...]]
     allAtoms = []
     # same format-ish as allAtoms
@@ -19,23 +20,29 @@ def createPolymers(numPolymers,bondAngle,bondLength,numAtomsInChain):
     atomsInChain = [] #  [type, x, y, z] coords 
     bondsInChain = [] #  [type, atom#, atom#]
     anglesInChain = [] # [type, end, middle, end] (these are atom numbers)
-   
+    xStart = initialStart
+    yStart = initialStart
+    zStart = initialStart
+    lengthBox = 1.5*numAtomsInChain*bondLength
     currAtom = 0 # indicates atom you are about to create
     for numChain in range(numPolymers):
 
         # create first bead
         currAtom += 1
-        # started at 1 so not on boundary of sim box
-        atomsInChain.append([1,1.0,1.0,1.0+numChain*2*bondLength])
+        # started at 10 so not on boundary of sim box
+    
+        if(zStart>=lengthBox):
+            zStart = initialStart
+            yStart += spacing
+
+        atomsInChain.append([1,xStart,yStart,zStart])
+        zStart += spacing
 
         while(len(atomsInChain) < numAtomsInChain):
             
             currAtom += 1
             #if you are about to create an even numbered atom
-            if(currAtom%2 == 0):
-                cxAdd = bondLength*math.cos(angleUsed)
-            else:
-                cxAdd = -bondLength*math.cos(angleUsed)
+            cxAdd = bondLength*math.cos(angleUsed)
             
             cyAdd = bondLength*math.sin(angleUsed)
             
@@ -78,9 +85,9 @@ def createPolymers(numPolymers,bondAngle,bondLength,numAtomsInChain):
 def main():
     
     # variables to change
-    outFile = open('singlePolymer.data','w') # where you want to store the coords of the polymer
-    numPolymers = 1 # how many polymers you're creating
-    numAtomsPerMol = 30 # number of beads in each polymer
+    outFile = open('straightPolymers.data','w') # where you want to store the coords of the polymer
+    numPolymers = 50 # how many polymers you're creating
+    numAtomsPerMol = 20 # number of beads in each polymer
     polymerBL = 1.0 # bond length between beads
     polymerAngle = 0 # angle between three beads
     cutoffLength = 2.5 # cutoff distance for LJ Pot. to be calculated
@@ -88,7 +95,7 @@ def main():
     # atomsList has coords of every atom, bondsList has bonds between every atom, anglesList has angles between atoms
     # coords are in their own lists by molecule
     atomsList, bondsList, anglesList = createPolymers(numPolymers,polymerAngle,polymerBL,numAtomsPerMol)
-    lengthBox = numAtomsPerMol + cutoffLength 
+    lengthBox = numAtomsPerMol*polymerBL
 
     #write to our file all the info we need
     outFile.write('# Polymer Data file\n')
@@ -96,9 +103,9 @@ def main():
     outFile.write(str(len(bondsList)*len(bondsList[0])) + '\t bonds\n')
     outFile.write(str(len(anglesList)*len(anglesList[0])) + '\t angles\n\n')
     outFile.write('1\tatom types\n1\tbond types\n1\tangle types\n\n')
-    outFile.write('0.0000\t' + str(lengthBox)+' xlo xhi\n')
-    outFile.write('0.0000\t' + str(lengthBox)+' ylo yhi\n')
-    outFile.write('0.0000\t' + str(lengthBox)+' zlo zhi\n')
+    outFile.write('0.0000\t' + str(lengthBox*1.5)+' xlo xhi\n')
+    outFile.write('0.0000\t' + str(lengthBox*1.5)+' ylo yhi\n')
+    outFile.write('0.0000\t' + str(lengthBox*1.5)+' zlo zhi\n\n')
     outFile.write('Masses\n\n1\t1.0\n')
 
     
@@ -145,4 +152,3 @@ def main():
 
 # call functions
 main()
-
